@@ -2251,6 +2251,13 @@ class Cursor:
 
     next = __next__
 
+    if version.parse('4.9') <= helpers.PYMONGO_VERSION:
+
+        def to_list(self, length=None):
+            if isinstance(length, int) and length < 1:
+                raise ValueError('to_list() length must be greater than 0')
+            return list(itertools.islice(self, length))
+
     def rewind(self):
         self._emitted = 0
 

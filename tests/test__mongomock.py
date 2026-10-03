@@ -5058,6 +5058,14 @@ def _SKIP(*args):
     return lambda cursor: cursor.skip(*args)
 
 
+def _TO_LIST(*args):
+    return lambda cursor: cursor.to_list(*args)
+
+
+def _TO_LIST_IN_BATCHES(cursor):
+    return [cursor.to_list(12) for _ in range(4)]
+
+
 class MongoClientSortSkipLimitTest(_CollectionComparisonTest):
     def setUp(self):
         super().setUp()
@@ -5089,6 +5097,23 @@ class MongoClientSortSkipLimitTest(_CollectionComparisonTest):
     )
     def test__count_fail(self):
         self.cmp.compare(_COUNT_EXCEPTION_TYPE).find()
+
+    @skipIf(version.parse('4.9') > helpers.PYMONGO_VERSION, 'to_list was added in pymongo 4.9')
+    def test__to_list(self):
+        self.cmp.compare(_SORT('index', 1), _TO_LIST()).find()
+        self.cmp.compare(_SORT('index', 1), _TO_LIST(10)).find()
+        self.cmp.compare(_SORT('index', 1), _SKIP(25), _TO_LIST(10)).find()
+        self.cmp.compare(_SORT('index', 1), _LIMIT(-5), _TO_LIST()).find()
+        self.cmp.compare(_SORT('index', 1), _TO_LIST_IN_BATCHES).find()
+        self.cmp.compare_exceptions(_TO_LIST(0)).find()
+        self.cmp.compare_exceptions(_TO_LIST(-1)).find()
+
+    @skipIf(version.parse('4.9') > helpers.PYMONGO_VERSION, 'to_list was added in pymongo 4.9')
+    def test__aggregate_to_list(self):
+        pipeline = [{'$sort': {'index': 1}}]
+        self.cmp.compare(_TO_LIST()).aggregate(pipeline)
+        self.cmp.compare(_TO_LIST_IN_BATCHES).aggregate(pipeline)
+        self.cmp.compare_exceptions(_TO_LIST(0)).aggregate(pipeline)
 
     def test__sort_name(self):
         self.cmp.do.delete_many({})

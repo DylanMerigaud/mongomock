@@ -1,3 +1,10 @@
+import itertools
+
+from packaging import version
+
+from mongomock import helpers
+
+
 class CommandCursor:
     def __init__(self, collection, curser_info=None, address=None, retrieved=0):
         self._collection = iter(collection)
@@ -29,6 +36,13 @@ class CommandCursor:
         return next(self._collection)
 
     __next__ = next
+
+    if version.parse('4.9') <= helpers.PYMONGO_VERSION:
+
+        def to_list(self, length=None):
+            if isinstance(length, int) and length < 1:
+                raise ValueError('to_list() length must be greater than 0')
+            return list(itertools.islice(self, length))
 
     def __enter__(self):
         return self

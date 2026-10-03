@@ -1523,6 +1523,31 @@ class CollectionAPITest(TestCase):
         with self.assertRaises(TypeError):
             cursor['not_a_number']  # pylint: disable=pointless-statement
 
+    @skipIf(version.parse('4.9') > helpers.PYMONGO_VERSION, 'to_list was added in pymongo 4.9')
+    def test__cursor_to_list(self):
+        self.db.collection.insert_many([{'_id': i} for i in range(5)])
+        cursor = self.db.collection.find().sort('_id')
+        self.assertEqual([{'_id': 0}, {'_id': 1}], cursor.to_list(2))
+        self.assertEqual([{'_id': 2}, {'_id': 3}, {'_id': 4}], cursor.to_list())
+        self.assertEqual([], cursor.to_list())
+        with self.assertRaises(ValueError):
+            cursor.to_list(0)
+
+    @skipIf(version.parse('4.9') > helpers.PYMONGO_VERSION, 'to_list was added in pymongo 4.9')
+    def test__command_cursor_to_list(self):
+        self.db.collection.insert_many([{'_id': i} for i in range(5)])
+        cursor = self.db.collection.aggregate([{'$sort': {'_id': 1}}])
+        self.assertEqual([{'_id': 0}, {'_id': 1}, {'_id': 2}], cursor.to_list(3))
+        self.assertEqual([{'_id': 3}, {'_id': 4}], cursor.to_list())
+        self.assertEqual([], cursor.to_list())
+        with self.assertRaises(ValueError):
+            cursor.to_list(-1)
+
+    @skipUnless(version.parse('4.9') > helpers.PYMONGO_VERSION, 'to_list was added in pymongo 4.9')
+    def test__cursor_to_list_not_available(self):
+        self.assertFalse(hasattr(self.db.collection.find(), 'to_list'))
+        self.assertFalse(hasattr(self.db.collection.aggregate([]), 'to_list'))
+
     def test__find_with_skip_param(self):
         """Make sure that find() will take in account skip parameter"""
 
